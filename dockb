@@ -1,0 +1,2 @@
+#!/bin/bash
+docker image build -t louisross/tf-spiking-monitor:1.0 .

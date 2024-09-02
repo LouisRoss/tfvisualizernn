@@ -1,0 +1,12 @@
+#!/bin/bash
+echo $(pwd)
+docker container run \
+-it \
+--rm \
+--name=tf-spiking-monitor \
+-v "$(pwd)":/app \
+-v "$(pwd)"/../spiking-model-configuration/configuration/:/app/src/configfiles \
+-v "$(pwd)"/../spiking-model-configuration/src/:/app/src/configuration \
+-p 8082:3000 \
+louisross/tf-spiking-monitor:1.0 \
+bash
