@@ -3,10 +3,11 @@ echo $(pwd)
 docker container run \
 -it \
 --rm \
---name=tf-spiking-monitor \
--v "$(pwd)":/app \
+--name=tf-spiking-dash \
+-v "$(pwd)":/visualizer \
 -v "$(pwd)"/../spiking-model-configuration/configuration/:/app/src/configfiles \
 -v "$(pwd)"/../spiking-model-configuration/src/:/app/src/configuration \
--p 8082:3000 \
-louisross/tf-spiking-monitor:1.0 \
+-v /media/internal/record/tfspikingnn:/record \
+-p 8050:8050 \
+louisross/tf-spiking-dash:1.0 \
 bash

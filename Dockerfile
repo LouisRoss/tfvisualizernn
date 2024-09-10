@@ -1,22 +1,23 @@
-FROM node:22
+FROM python
 
 LABEL version="1.0"
-LABEL description="Node-based web page for visualizing Tensorflow Spiking Neural Network models."
+LABEL description="Plotly web page for visualizing Tensorflow Spiking Neural Network models."
 LABEL maintainer = "Louis Ross <louis.ross@gmail.com"
 
-WORKDIR /app
+WORKDIR /visualizer
 
-#COPY ["./package.json", "./package-lock.json", "/app/"]
-COPY ["./package.json", "/app/"]
 
 RUN ls
-RUN ["npm", "install", "-g", "npm@10.8.3"]
-#RUN npm install --production
-RUN ["npm", "install"]
-
+RUN ["pip", "install", "dash"]
+RUN ["pip", "install", "dash_slicer"]
+RUN ["pip", "install", "pandas"]
+RUN ["pip", "install", "imageio"]
+RUN ["pip", "install", "chart_studio"]
+RUN ["pip", "install", "seaborn"]
+RUN ["pip", "install", "pyorbital"]
 
 COPY . .
 
-EXPOSE 3000
+EXPOSE 8050
 
-CMD ["npm", "start"]
+CMD ["bash"]
