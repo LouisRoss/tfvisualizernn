@@ -1,3 +1,4 @@
+import csv
 import math
 from dash import Dash, html, dcc, Input, Output, callback
 import imageio
@@ -31,14 +32,22 @@ def GeneratePositions(size: int):
     return (xedgepos, yedgepos)
 
 
-xedgepos, yedgepos = GeneratePositions(784)
+rows = []
+currentrow = 0
+with open('/record/simulation1/spikes/spike0.csv') as csvfile:
+    csvreader = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)
+    for row in csvreader:
+        rows.append(row)
+
+xedgepos, yedgepos = GeneratePositions(640)
 fig = go.Figure(data=go.Scattergl(
     x = xedgepos,
     y = yedgepos,
     dy=2,
     mode='markers',
     marker=dict(
-        color= np.random.randn(784),
+        #color= np.random.randn(784),
+        color = rows[currentrow],
         colorscale='Viridis',
         line_width=1,
         size=20
@@ -66,18 +75,23 @@ app.layout = [
 @callback(Output('live-update-graph', 'figure'), 
           Input('interval-component', 'n_intervals'))
 def update_graph_live(n):
+    global rows, currentrow
     fig = go.Figure(data=go.Scattergl(
         x = xedgepos,
         y = yedgepos,
         dy=2,
         mode='markers',
         marker=dict(
-            color= np.random.randn(784),
+            #color= np.random.randn(784),
+            color = rows[currentrow],
             colorscale='Viridis',
             line_width=1,
             size=20
         )
     ))
+    currentrow += 1
+    if currentrow >= len(rows):
+        currentrow = 0
     return fig
 
 

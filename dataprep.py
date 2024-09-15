@@ -23,16 +23,26 @@ class DataPrep:
     def __init__(self, simulationNumber):
         self.simulationNumber = simulationNumber
         self.simulationExists = os.path.exists(self.MakeSimulationPath())
-        self.index = {
-            'simulation': simulationNumber,
-            'populations': 0,
-            'connections': [
-            ],
-            'spikes': [
-            ],
-            'activations': [
-            ]
-        }
+        self.index = {}
+
+    def __enter__(self):
+        if os.path.exists(self.MakeIndexFilePath()):
+            self.index = json.loads(self.MakeIndexFilePath())
+        else:
+            self.index = {
+                'simulation': self.simulationNumber,
+                'populations': 0,
+                'connections': [
+                ],
+                'spikes': [
+                ],
+                'activations': [
+                ]
+            }
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        with open(self.MakeIndexFilePath(), 'w') as indexfile:
+            json.dump(self.index, indent=4)
 
 
     def MakeSimulationPath(self):
@@ -69,18 +79,17 @@ class DataPrep:
             os.makedirs(self.MakeSimulationPath() + DataPrep.activationsFolder)
         return self.MakeSimulationPath() + DataPrep.activationsFolder + DataPrep.activationBaseFilename + str(population) + '.csv'
 
-    def EnsureConversion(self):
+
+    def BuildConnections(self, debug=False):
+        # Convert the raw arrays emitted by TensorFlow to CSV files, one connection per population.
         if not self.simulationExists:
             print(f'No folder for simulation {self.simulationNumber} exists')
             return
         
-        if os.path.exists(self.MakeIndexFilePath()):
-            self.index = json.loads(self.MakeIndexFilePath())
+        if not os.path.exists(self.MakeConnectionsSourceFilePath()):
+            print(f'No connection file {self.MakeConnectionsSourceFilePath()} for simulation {self.simulationNumber} exists')
             return
         
-
-    def BuildConnections(self, debug=False):
-        # Convert the raw arrays emitted by TensorFlow to CSV files, one connection per population.
         builder = ArrayBuilder(self.MakeConnectionsSourceFilePath())
         builder.Build(debug=debug)
         linedata = builder.linedata
@@ -99,6 +108,14 @@ class DataPrep:
 
     def BuildSpikes(self, debug=False):
         # Convert the raw arrays emitted by TensorFlow to CSV files, one set of spikes per population.
+        if not self.simulationExists:
+            print(f'No folder for simulation {self.simulationNumber} exists')
+            return
+        
+        if not os.path.exists(self.MakeSpikesSourceFilePath()):
+            print(f'No spikes file {self.MakeSpikesSourceFilePath()} for simulation {self.simulationNumber} exists')
+            return
+        
         builder = ArrayBuilder(self.MakeSpikesSourceFilePath())
         builder.Build(debug=debug)
         linedata = builder.linedata
@@ -124,6 +141,14 @@ class DataPrep:
 
     def BuildActivations(self, debug=False):
         # Convert the raw arrays emitted by TensorFlow to CSV files, one set of activations per population.
+        if not self.simulationExists:
+            print(f'No folder for simulation {self.simulationNumber} exists')
+            return
+        
+        if not os.path.exists(self.MakeActivationsSourceFilePath()):
+            print(f'No activation file {self.MakeActivationsSourceFilePath()} for simulation {self.simulationNumber} exists')
+            return
+        
         builder = ArrayBuilder(self.MakeActivationsSourceFilePath())
         builder.Build(debug=debug)
         linedata = builder.linedata
