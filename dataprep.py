@@ -25,20 +25,12 @@ class DataPrep:
         self.simulationExists = os.path.exists(self.MakeSimulationPath())
         self.index = {
             'simulation': simulationNumber,
-            'populations': 4,
+            'populations': 0,
             'connections': [
             ],
             'spikes': [
-                './' + DataPrep.spikesFolder + DataPrep.spikeBaseFilename + str(1) + '.csv',
-                './' + DataPrep.spikesFolder + DataPrep.spikeBaseFilename + str(2) + '.csv',
-                './' + DataPrep.spikesFolder + DataPrep.spikeBaseFilename + str(3) + '.csv',
-                './' + DataPrep.spikesFolder + DataPrep.spikeBaseFilename + str(4) + '.csv'
             ],
             'activations': [
-                './' + DataPrep.activationsFolder + DataPrep.activationBaseFilename + str(1) + '.csv',
-                './' + DataPrep.activationsFolder + DataPrep.activationBaseFilename + str(2) + '.csv',
-                './' + DataPrep.activationsFolder + DataPrep.activationBaseFilename + str(3) + '.csv',
-                './' + DataPrep.activationsFolder + DataPrep.activationBaseFilename + str(4) + '.csv'
             ]
         }
 
@@ -88,11 +80,11 @@ class DataPrep:
         
 
     def BuildConnections(self, debug=False):
+        # Convert the raw arrays emitted by TensorFlow to CSV files, one connection per population.
         builder = ArrayBuilder(self.MakeConnectionsSourceFilePath())
         builder.Build(debug=debug)
         linedata = builder.linedata
 
-        # Build an array of population arrays.
         populationCount = len(linedata)
         if populationCount > self.index['populations']:
             self.index['populations'] = populationCount 
@@ -104,31 +96,53 @@ class DataPrep:
                 csvwriter = csv.writer(csvfile)
                 for line in linedata[pop]:
                     csvwriter.writerow(line)
-"""
-builder = ArrayBuilder('data/fullspike.csv')
-builder.Build(debug=False)
-linedata = builder.linedata
 
-data = []
-population = 0
-print(f'Shape: {linedata.shape}')
-for iteration in range(len(linedata)):
-    data.append([])
+    def BuildSpikes(self, debug=False):
+        # Convert the raw arrays emitted by TensorFlow to CSV files, one set of spikes per population.
+        builder = ArrayBuilder(self.MakeSpikesSourceFilePath())
+        builder.Build(debug=debug)
+        linedata = builder.linedata
 
-for iteration in range(len(linedata)):
-    #print(f'{iteration[0][0][0]}\n')
-    print(f'{linedata[iteration][population]}\n')
+        # An array of populations, each is an array of samples.
+        data = []
+        if len(linedata) > 0:
+            for pop in range(len(linedata[0])):
+                data.append([])
 
-    for pop in range(8):
-        data[pop].append(linedata[iteration][population+pop])
+        for iteration in range(len(linedata)):
+            for pop in range(len(linedata[iteration])):
+                data[pop].append(linedata[iteration][pop])
 
-fig, axs = plt.subplots(nrows=2, ncols=4, figsize=(10,50), layout="constrained")
-print(axs)
+        for pop in range(len(data)):
+            spikeFile = self.MakeSpikeOutputFilePath(pop)
+            self.index['spikes'].append(spikeFile)
+            with open(spikeFile, 'w') as csvfile:
+                csvwriter = csv.writer(csvfile)
+                for line in data[pop]:
+                    csvwriter.writerow(line)
 
-pop = 0
-for ax in axs.flat:
-    ax.imshow(data[pop])
-    pop += 1
 
-plt.show()
-"""
+    def BuildActivations(self, debug=False):
+        # Convert the raw arrays emitted by TensorFlow to CSV files, one set of activations per population.
+        builder = ArrayBuilder(self.MakeActivationsSourceFilePath())
+        builder.Build(debug=debug)
+        linedata = builder.linedata
+
+        # An array of populations, each is an array of samples.
+        data = []
+        if len(linedata) > 0:
+            for pop in range(len(linedata[0])):
+                data.append([])
+
+        for iteration in range(len(linedata)):
+            for pop in range(len(linedata[iteration])):
+                data[pop].append(linedata[iteration][pop])
+
+        for pop in range(len(data)):
+            activationFile = self.MakeSpikeOutputFilePath(pop)
+            self.index['activations'].append(activationFile)
+            with open(activationFile, 'w') as csvfile:
+                csvwriter = csv.writer(csvfile)
+                for line in data[pop]:
+                    csvwriter.writerow(line)
+
