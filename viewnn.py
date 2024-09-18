@@ -34,12 +34,15 @@ def GeneratePositions(size: int):
 
 rows = []
 currentrow = 0
-with open('/record/simulation1/spikes/spike0.csv') as csvfile:
+with open('/record/simulation7/spikes/spike0.csv') as csvfile:
     csvreader = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)
     for row in csvreader:
         rows.append(row)
 
-xedgepos, yedgepos = GeneratePositions(640)
+if len(rows) == 0:
+    rows.append(np.random.randn(784))
+
+xedgepos, yedgepos = GeneratePositions(len(rows[0]))
 fig = go.Figure(data=go.Scattergl(
     x = xedgepos,
     y = yedgepos,
@@ -64,7 +67,7 @@ app.layout = [
             dcc.Graph(id='live-update-graph', style={'height':'900px', 'width':'900px'}),
             dcc.Interval(
                 id='interval-component',
-                interval=200, # in milliseconds
+                interval=250, # in milliseconds
                 n_intervals=0)
         ],
         style={'margin':'auto'}
