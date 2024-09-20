@@ -34,14 +34,20 @@ def GeneratePositions(size: int):
 
 rows = []
 currentrow = 0
-with open('/record/simulation7/spikes/spike0.csv') as csvfile:
-    csvreader = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)
-    for row in csvreader:
-        rows.append(row)
+def LoadSimulation(simnumber):
+    global rows, currentrow
+    with open('/record/simulation' + str(simnumber) + '/spikes/spike0.csv') as csvfile:
+        csvreader = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)
+        rows = []
+        for row in csvreader:
+            rows.append(row)
 
-if len(rows) == 0:
-    rows.append(np.random.randn(784))
+    if len(rows) == 0:
+        rows.append(np.random.randn(784))
 
+    currentrow = 0
+
+LoadSimulation(7)
 xedgepos, yedgepos = GeneratePositions(len(rows[0]))
 fig = go.Figure(data=go.Scattergl(
     x = xedgepos,
@@ -56,11 +62,17 @@ fig = go.Figure(data=go.Scattergl(
         size=20
     )
 ))
+
 app = Dash(__name__, update_title=None)
 
 
 app.layout = [
     html.Div(className='row', children='Tensorflow Spiking Neural Networks', style={'textAlign':'center', 'fontSize':30}),
+    html.Div(className='row', 
+        children=[
+            html.Div(children=dcc.Dropdown(['1','2','3','4','5','6','7'], '7', style={'width':100, 'fontSize':18}, id='sim-dropdown')),
+            html.Div()
+        ]),
     html.Hr(),
     html.Div(
         children=[
@@ -73,6 +85,10 @@ app.layout = [
         style={'margin':'auto'}
     )
 ]
+
+@callback(Input('sim-dropdown', 'value'))
+def load_new_simulation(value):
+    LoadSimulation(value)
 
 
 @callback(Output('live-update-graph', 'figure'), 
