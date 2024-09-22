@@ -1,5 +1,7 @@
 import csv
 import math
+import os
+import re
 from dash import Dash, html, dcc, Input, Output, callback
 import imageio
 from dash_slicer import VolumeSlicer
@@ -10,6 +12,10 @@ import chart_studio.plotly as py
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
+
+path = '/record/'
+fileparse = r'^([a-zA-Z]+)(\d*)$'
+
 
 """
 df_iris = px.data.iris()
@@ -31,12 +37,24 @@ def GeneratePositions(size: int):
 
     return (xedgepos, yedgepos)
 
+def GetSimulationNumbers():
+  sims = []
+  obj = os.scandir(path)
+  for entry in obj:
+    if entry.is_dir():
+      sims.append(re.split(fileparse, entry.name)[2])
+
+  sims.sort()
+  if len(sims) == 0:
+      sims = ['<empty>']
+  return sims
+
 
 rows = []
 currentrow = 0
 def LoadSimulation(simnumber):
     global rows, currentrow
-    with open('/record/simulation' + str(simnumber) + '/spikes/spike0.csv') as csvfile:
+    with open('/record/simulation' + str(simnumber) + '/spikes/spike2.csv') as csvfile:
         csvreader = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)
         rows = []
         for row in csvreader:
@@ -47,7 +65,7 @@ def LoadSimulation(simnumber):
 
     currentrow = 0
 
-LoadSimulation(7)
+LoadSimulation(0)
 xedgepos, yedgepos = GeneratePositions(len(rows[0]))
 fig = go.Figure(data=go.Scattergl(
     x = xedgepos,
@@ -70,7 +88,7 @@ app.layout = [
     html.Div(className='row', children='Tensorflow Spiking Neural Networks', style={'textAlign':'center', 'fontSize':30}),
     html.Div(className='row', 
         children=[
-            html.Div(children=dcc.Dropdown(['1','2','3','4','5','6','7'], '7', style={'width':100, 'fontSize':18}, id='sim-dropdown')),
+            html.Div(children=dcc.Dropdown(GetSimulationNumbers(), GetSimulationNumbers()[0], style={'width':100, 'fontSize':18}, id='sim-dropdown')),
             html.Div()
         ]),
     html.Hr(),

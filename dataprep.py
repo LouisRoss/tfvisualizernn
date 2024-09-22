@@ -80,6 +80,15 @@ class DataPrep:
         return self.MakeSimulationPath() + DataPrep.activationsFolder + DataPrep.activationBaseFilename + str(population) + '.csv'
 
 
+    def BuildCvsFile(self, filename, data):
+        # Abstract CSV file writing, because when the with...as idiom
+        # occurs inside a for loop, the file may not be closed each iteration.
+        with open(filename, 'w') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            for line in data:
+                csvwriter.writerow(line)
+
+
     def BuildConnections(self, debug=False):
         # Convert the raw arrays emitted by TensorFlow to CSV files, one connection per population.
         if not self.simulationExists:
@@ -101,10 +110,7 @@ class DataPrep:
         for pop in range(populationCount):
             connectionFile = self.MakeConnectionOutputFilePath(pop)
             self.index['connections'].append(connectionFile)
-            with open(connectionFile, 'w') as csvfile:
-                csvwriter = csv.writer(csvfile)
-                for line in linedata[pop]:
-                    csvwriter.writerow(line)
+            self.BuildCvsFile(connectionFile, linedata[pop])
 
     def BuildSpikes(self, debug=False):
         # Convert the raw arrays emitted by TensorFlow to CSV files, one set of spikes per population.
@@ -133,10 +139,7 @@ class DataPrep:
         for pop in range(len(data)):
             spikeFile = self.MakeSpikeOutputFilePath(pop)
             self.index['spikes'].append(spikeFile)
-            with open(spikeFile, 'w') as csvfile:
-                csvwriter = csv.writer(csvfile)
-                for line in data[pop]:
-                    csvwriter.writerow(line)
+            self.BuildCvsFile(spikeFile, data[pop])
 
 
     def BuildActivations(self, debug=False):
@@ -166,8 +169,5 @@ class DataPrep:
         for pop in range(len(data)):
             activationFile = self.MakeSpikeOutputFilePath(pop)
             self.index['activations'].append(activationFile)
-            with open(activationFile, 'w') as csvfile:
-                csvwriter = csv.writer(csvfile)
-                for line in data[pop]:
-                    csvwriter.writerow(line)
+            self.BuildCvsFile(activationFile, data[pop])
 
