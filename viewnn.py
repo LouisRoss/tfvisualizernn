@@ -54,7 +54,7 @@ rows = []
 currentrow = 0
 def LoadSimulation(simnumber):
     global rows, currentrow
-    with open('/record/simulation' + str(simnumber) + '/spikes/spike2.csv') as csvfile:
+    with open('/record/simulation' + str(simnumber) + '/spikes/spike0.csv') as csvfile:
         csvreader = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)
         rows = []
         for row in csvreader:
@@ -88,13 +88,13 @@ app.layout = [
     html.Div(className='row', children='Tensorflow Spiking Neural Networks', style={'textAlign':'center', 'fontSize':30}),
     html.Div(className='row', 
         children=[
-            html.Div(children=dcc.Dropdown(GetSimulationNumbers(), GetSimulationNumbers()[0], style={'width':100, 'fontSize':18}, id='sim-dropdown')),
+            html.Div(children=dcc.Dropdown(GetSimulationNumbers(), GetSimulationNumbers()[0], style={'width':120, 'fontSize':18}, id='sim-dropdown')),
             html.Div()
         ]),
     html.Hr(),
     html.Div(
         children=[
-            dcc.Graph(id='live-update-graph', style={'height':'900px', 'width':'900px'}),
+            dcc.Graph(id='live-update-graph', style={'height':'900px', 'width':'1200px'}),
             dcc.Interval(
                 id='interval-component',
                 interval=250, # in milliseconds
@@ -112,7 +112,7 @@ def load_new_simulation(value):
 @callback(Output('live-update-graph', 'figure'), 
           Input('interval-component', 'n_intervals'))
 def update_graph_live(n):
-    global rows, currentrow
+    global rows, currentrow, xedgepos, yedgepos
     fig = go.Figure(data=go.Scattergl(
         x = xedgepos,
         y = yedgepos,
@@ -123,7 +123,7 @@ def update_graph_live(n):
             color = rows[currentrow],
             colorscale='Viridis',
             line_width=1,
-            size=20
+            size=18
         )
     ))
     currentrow += 1
