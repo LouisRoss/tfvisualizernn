@@ -53,19 +53,7 @@ def GeneratePositions(size: int):
 
 def LoadSimulation():
     global rows, currentrow, simulation, simulationNo, populationNo
-    """
-    with open(path + 'simulation' + str(simulationNo) + '/spikes/spike' + str(populationNo) + '.csv') as csvfile:
-        csvreader = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)
-        rows = []
-        for row in csvreader:
-            rows.append(row)
 
-    if len(rows) == 0:
-        rows.append(np.random.randn(784))
-    GeneratePositions(len(rows[0]))
-
-    currentrow = 0
-    """
     population_numbers = GetPopulationNumbers()
     # simulation[population][tick][layer]
 
@@ -78,6 +66,14 @@ def LoadSimulation():
                 population.append(row)
         simulation.append(population)
 
+def CalibrateValuesForViewing(values):
+    result = []
+    for value in values:
+        result.append(float(value) * 10.0 + 10.0)
+
+    return result
+
+
 def ViewFullPopulation():
     global simulation, rows, currentrow, populationNo
     print(f'Viewing for full population {populationNo}, where simulation has {len(simulation)} populations and population {populationNo} has {"millions of"} cells')
@@ -88,7 +84,7 @@ def ViewFullPopulation():
     population = simulation[populationNo]
     print(f'View adding {len(population)} rows')
     for population_sample in population:
-        rows.append(population_sample)
+        rows.append(CalibrateValuesForViewing(population_sample))
 
     GeneratePositions(len(rows[0]))
     currentrow = 0
@@ -108,53 +104,18 @@ def ViewAcrossPopulations(cells):
     # where i is some aggregation of cells[].
     for tick in range(ticks):
         row = []
-        for pop in range(len(simulation)):
-            population = simulation[pop]
-            population_at_tick = population[tick]
-            aggregate = 0
-            for cell in cells:
-                aggregate |= int(population_at_tick[cell])
-
-            row.append(float(aggregate))
-        rows.append(row)
-
-    GeneratePositions(len(rows[0]))
-    currentrow = 0
-
-
-def LoadSimulationPopulations(cells):
-    global simulationNo, simulation, rows, currentrow
-
-    population_numbers = GetPopulationNumbers()
-    # all_populations[population][tick][layer]
-
-    ticks = 0
-    simulation = []
-    for population_number in population_numbers:
-        population = []
-        with open(path + 'simulation' + str(simulationNo) + '/spikes/spike' + str(population_number) + '.csv') as csvfile:
-            csvreader = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)
-            for row in csvreader:
-                population.append(row)
-        ticks = len(population)
-        simulation.append(population)
-
-    # rows[tick][population sampled at layer[i]],
-    # where i is some aggregation of cells[].
-    rows = []
-    for tick in range(ticks):
-        row = []
-        for pop in range(len(simulation)):
-            population = simulation[pop]
+        for population in simulation:
             population_at_tick = population[tick]
             aggregate = 0
             for cell in cells:
                 aggregate |= int(population_at_tick[cell])
 
             row.append(aggregate)
-        rows.append(row)
+        rows.append(CalibrateValuesForViewing(row))
 
+    GeneratePositions(len(rows[0]))
     currentrow = 0
+
 
 def GetSimulationNumbers():
   sims = []
@@ -263,7 +224,7 @@ def handle_user(sim_value, pop_value, run_stop_value, run_stop_clicks, orientati
         if orientation == 'Full Population':
             ViewFullPopulation()
         elif orientation == 'Across Populations':
-            ViewAcrossPopulations([0])
+            ViewAcrossPopulations([0,1])
 
         if run_stop_value == 'Stop':        # Running
             disable_sim_dropdown = True
@@ -296,7 +257,7 @@ def handle_user(sim_value, pop_value, run_stop_value, run_stop_clicks, orientati
         if orientation == 'Full Population':
             ViewFullPopulation()
         elif orientation == 'Across Populations':
-            ViewAcrossPopulations([0])
+            ViewAcrossPopulations([0,1])
 
         if run_stop_value == 'Stop':        # Running
             disable_sim_dropdown = True
@@ -305,7 +266,6 @@ def handle_user(sim_value, pop_value, run_stop_value, run_stop_clicks, orientati
         disable_runstop_button = False
         disable_pop_dropdown = False
 
-    print(f'Returning disable_runstop_button = {disable_runstop_button}')
     return new_runstop_button_value, disable_runstop_button, disable_sim_dropdown, disable_pop_dropdown, disable_timer, GetPopulationNumbers()
 
 
@@ -325,11 +285,11 @@ def update_graph_live(n):
         marker=dict(
             #color= np.random.randn(784),
             color = rows[currentrow],
+            size = rows[currentrow],
             colorscale='Viridis',
             cmin=0.0,
-            cmax=1.0,
-            line_width=1,
-            size=22
+            cmax=20.0,
+            line_width=1
         )
     ))
     currentrow += 1
