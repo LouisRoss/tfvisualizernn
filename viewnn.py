@@ -2,7 +2,7 @@ import csv
 import math
 import os
 import re
-from dash import Dash, html, dcc, Input, Output, ctx, callback
+from dash import Dash, html, dcc, Input, Output, State, ctx, callback
 from dash.exceptions import PreventUpdate
 import imageio
 from dash_slicer import VolumeSlicer
@@ -115,7 +115,7 @@ def ViewAcrossPopulations(cells):
             for cell in cells:
                 aggregate |= int(population_at_tick[cell])
 
-            row.append(aggregate)
+            row.append(float(aggregate))
         rows.append(row)
 
     GeneratePositions(len(rows[0]))
@@ -199,7 +199,7 @@ app.layout = [
             children=[
                 html.Div(dcc.Dropdown(GetSimulationNumbers(), GetSimulationNumbers()[0], disabled=False, style={'width':120, 'fontSize':18, 'flex': '0 0 auto'}, id='sim-dropdown')),
                 html.Div(dcc.Dropdown(GetPopulationNumbers(), GetPopulationNumbers()[0], disabled=True, style={'width':120, 'fontSize':18, 'flex': '0 0 auto'}, id='pop-dropdown')),
-                html.Div(dcc.RadioItems(['Full Population', 'Across Populations'], 'Full Population', inline=True), style={'padding': 10, 'flex': '0 0 auto'}, id='orientation'),
+                html.Div(dcc.RadioItems(['Full Population', 'Across Populations'], 'Full Population', inline=True, style={'padding': 10, 'flex': '0 0 auto'}, id='orientation')),
                 html.Div(html.Button('Run', disabled=True, style={'float':'left', 'width':100, 'padding': 10, 'flex': '0 0 auto'}, id='run-stop', n_clicks=0)),
                 html.Div(style={'width':100, 'padding': 10, 'flex': '1 1 auto'})
             ], style={'display': 'flex', 'flexDirection': 'row'}),
@@ -230,8 +230,9 @@ app.layout = [
           Input('sim-dropdown', 'value'),
           Input('pop-dropdown', 'value'),
           Input('run-stop', 'children'),
-          Input('run-stop', 'n_clicks'))
-def handle_user(sim_value, pop_value, run_stop_value, run_stop_clicks):
+          Input('run-stop', 'n_clicks'),
+          Input('orientation', 'value'))
+def handle_user(sim_value, pop_value, run_stop_value, run_stop_clicks, orientation):
     global simulationNo, populationNo
 
     selection_id = ctx.triggered_id
@@ -259,7 +260,11 @@ def handle_user(sim_value, pop_value, run_stop_value, run_stop_clicks):
             pop_value = 0
 
         populationNo = pop_value
-        ViewFullPopulation()
+        if orientation == 'Full Population':
+            ViewFullPopulation()
+        elif orientation == 'Across Populations':
+            ViewAcrossPopulations([0])
+
         if run_stop_value == 'Stop':        # Running
             disable_sim_dropdown = True
             disable_timer = False
@@ -285,82 +290,23 @@ def handle_user(sim_value, pop_value, run_stop_value, run_stop_clicks):
             disable_timer = True
         else:
             new_runstop_button_value = 'Run'
+    elif selection_id == 'orientation':
+        print(f'Changing orientation to {orientation}')
+
+        if orientation == 'Full Population':
+            ViewFullPopulation()
+        elif orientation == 'Across Populations':
+            ViewAcrossPopulations([0])
+
+        if run_stop_value == 'Stop':        # Running
+            disable_sim_dropdown = True
+            disable_timer = False
+
+        disable_runstop_button = False
+        disable_pop_dropdown = False
 
     print(f'Returning disable_runstop_button = {disable_runstop_button}')
     return new_runstop_button_value, disable_runstop_button, disable_sim_dropdown, disable_pop_dropdown, disable_timer, GetPopulationNumbers()
-
-
-"""
-@callback(Output('interval-component', 'disabled'),
-          Output('pop-dropdown', 'options'),
-          Input('sim-dropdown', 'value'))
-def load_new_simulation(value):
-    global simulationNo
-    print(f'Loading simulation {value}')
-
-    if value is None:
-        value = 0
-
-    simulationNo = value
-    LoadSimulation()
-    print(f'Simulation {value} loaded')
-
-    return True, GetPopulationNumbers()
-
-
-@callback(Output('interval-component', 'disabled'),
-          Input('pop-dropdown', 'value'))
-def load_new_simulation(value):
-    global populationNo
-    print(f'Viewing population {value}')
-
-    if value is None:
-        value = 0
-
-    populationNo = value
-    #LoadSimulation()
-    ViewFullPopulation()
-
-    return False
-
-
-@callback(Output('run-stop', 'value'),
-          Output('run-stop', 'disabled'),
-          Output('sim-dropdown', 'disabled'),
-          Output('pop-dropdown', 'disabled'),
-          Output('interval-component', 'disabled'),
-          Input('run-stop', 'value'),
-          prevent_initial_callback=True)
-def handle_run_stop_button(run_stop_value):
-    global simulationNo, populationNo
-
-    print(f'Handle RunStop button callback with button = {run_stop_value}')
-
-    new_runstop_button_value = ''
-    disable_runstop_button = True
-    disable_sim_dropdown = False
-    disable_pop_dropdown = True
-    disable_timer = True
-    if run_stop_value == 'Run':
-        print(f'Running simulation {simulationNo}, population {populationNo}')
-
-        new_runstop_button_value = 'Stop'
-        disable_runstop_button = False
-        disable_sim_dropdown = True
-        disable_pop_dropdown = True
-        disable_timer = False
-    elif run_stop_value == 'Stop':
-        print(f'Stopping simulation {simulationNo}, population {populationNo}')
-
-        new_runstop_button_value = 'Run'
-        disable_runstop_button = True
-        disable_sim_dropdown = False
-        disable_pop_dropdown = False
-        disable_timer = True
-
-    return new_runstop_button_value, disable_runstop_button, disable_sim_dropdown, disable_pop_dropdown, disable_timer
-"""
-
 
 
 @callback(Output('simulation-tick', 'children'),
@@ -380,6 +326,8 @@ def update_graph_live(n):
             #color= np.random.randn(784),
             color = rows[currentrow],
             colorscale='Viridis',
+            cmin=0.0,
+            cmax=1.0,
             line_width=1,
             size=22
         )
@@ -387,7 +335,7 @@ def update_graph_live(n):
     currentrow += 1
     if currentrow >= len(rows):
         currentrow = 0
-    return f'Tick: {currentrow}', fig
+    return f'Tick: {currentrow} {rows[currentrow][0]}', fig
 
 
 if __name__ == "__main__":
