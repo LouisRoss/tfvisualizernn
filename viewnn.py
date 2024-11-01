@@ -2,7 +2,7 @@ import csv
 import math
 import os
 import re
-from dash import Dash, html, dcc, Input, Output, State, ctx, callback
+from dash import Dash, html, dcc, Input, Output, State, Patch, ctx, callback
 from dash.exceptions import PreventUpdate
 import imageio
 from dash_slicer import VolumeSlicer
@@ -33,6 +33,7 @@ rows = []
 currentrow = 0
 simulationNo = 0
 populationNo = 0
+simulation_loaded = False
 
 
 def GeneratePositions(size: int):
@@ -52,7 +53,7 @@ def GeneratePositions(size: int):
 
 
 def LoadSimulation():
-    global rows, currentrow, simulation, simulationNo, populationNo
+    global rows, currentrow, simulation_loaded, simulation, simulationNo, populationNo
 
     population_numbers = GetPopulationNumbers()
     # simulation[population][tick][layer]
@@ -65,6 +66,8 @@ def LoadSimulation():
             for row in csvreader:
                 population.append(row)
         simulation.append(population)
+
+    simulation_loaded = True
 
 def CalibrateValuesForViewing(values):
     result = []
@@ -168,7 +171,7 @@ app.layout = [
     html.Div(children=[
         html.Div(
             children=[
-                dcc.Graph(id='live-update-graph', style={'height':'900px', 'width':'900px'}),
+                dcc.Graph(id='live-update-graph', style={'height':'900px', 'width':'900px'}, figure=go.Figure(data=go.Scattergl())),
                 dcc.Interval(
                     id='interval-component',
                     interval=250, # in milliseconds
@@ -194,7 +197,7 @@ app.layout = [
           Input('run-stop', 'n_clicks'),
           Input('orientation', 'value'))
 def handle_user(sim_value, pop_value, run_stop_value, run_stop_clicks, orientation):
-    global simulationNo, populationNo
+    global simulationNo, populationNo, simulation_loaded
 
     selection_id = ctx.triggered_id
 
@@ -241,6 +244,7 @@ def handle_user(sim_value, pop_value, run_stop_value, run_stop_clicks, orientati
             disable_sim_dropdown = True
             disable_pop_dropdown = False    # Allow population changes while running.
             disable_timer = False
+            simulation_loaded = True
         elif run_stop_value == 'Stop':
             print(f'Stopping simulation {simulationNo}, population {populationNo}')
 
@@ -256,8 +260,10 @@ def handle_user(sim_value, pop_value, run_stop_value, run_stop_clicks, orientati
 
         if orientation == 'Full Population':
             ViewFullPopulation()
+            simulation_loaded = True
         elif orientation == 'Across Populations':
             ViewAcrossPopulations([0,1])
+            simulation_loaded = True
 
         if run_stop_value == 'Stop':        # Running
             disable_sim_dropdown = True
@@ -273,29 +279,46 @@ def handle_user(sim_value, pop_value, run_stop_value, run_stop_clicks, orientati
           Output('live-update-graph', 'figure'), 
           Input('interval-component', 'n_intervals'))
 def update_graph_live(n):
-    global rows, currentrow, xedgepos, yedgepos
+    global rows, currentrow, xedgepos, yedgepos, simulation_loaded
     if len(rows) == 0:
         raise PreventUpdate
 
-    fig = go.Figure(data=go.Scattergl(
-        x = xedgepos,
-        y = yedgepos,
-        dy=2,
-        mode='markers',
-        marker=dict(
-            #color= np.random.randn(784),
-            color = rows[currentrow],
-            size = rows[currentrow],
-            colorscale='Viridis',
-            cmin=0.0,
-            cmax=20.0,
-            line_width=1
-        )
-    ))
+    if simulation_loaded:
+        print(f'Fresh simulation, return new figure')
+        fig = go.Figure(data=go.Scattergl(
+            x = xedgepos,
+            y = yedgepos,
+            dy=2,
+            mode='markers',
+            marker=dict(
+                #color= np.random.randn(784),
+                color = rows[currentrow],
+                size = rows[currentrow],
+                colorscale='Viridis',
+                cmin=0.0,
+                cmax=20.0,
+                line_width=1
+            )
+        ))
+        simulation_loaded = False
+    else:
+        fig = Patch()
+        updated_marker = dict(
+                #color= np.random.randn(784),
+                color = rows[currentrow],
+                size = rows[currentrow],
+                colorscale='Viridis',
+                cmin=0.0,
+                cmax=20.0,
+                line_width=1
+            )
+        fig['data'][0]['marker'] = updated_marker
+
+    visiblerow = currentrow
     currentrow += 1
     if currentrow >= len(rows):
         currentrow = 0
-    return f'Tick: {currentrow} {rows[currentrow][0]}', fig
+    return f'Tick: {visiblerow} {rows[visiblerow][0]}', fig
 
 
 if __name__ == "__main__":
